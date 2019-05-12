@@ -1,6 +1,7 @@
 extern crate evdev_rs as evdev;
 extern crate serialport;
 extern crate rand;
+extern crate clap; 
 
 use evdev::*;
 use evdev::enums::*;
@@ -12,10 +13,7 @@ use serialport::prelude::*;
 use std::str::from_utf8;
 use rand::Rng;
 use std::process::Command;
-
-fn usage() {
-    println!("Usage: evtest /path/to/device /path/to/serial");
-}
+use clap::{App, Arg};
 
 fn press_keys(keys: &Vec<EV_KEY>, dev: &UInputDevice) {
     let t = TimeVal::new(0,0);
@@ -73,18 +71,26 @@ fn lights_off() {
 }
 
 fn main() {
-    let mut args = std::env::args();
-    if args.len() != 3 {
-        usage();
-        std::process::exit(1);
-    }
-    let path = &args.nth(1).unwrap();
-    let port = &args.nth(0).unwrap();
+    let args = App::new("QiDeck")
+        .version("1.0.0")
+        .author("Brooks J Rady <b.j.rady@gmail.com>")
+        .about("Userspace driver and macro configuration tool for the QiDeck")
+        .arg(Arg::with_name("keyboard")
+             .index(1)
+             .value_name("/dev/input/eventX")
+             .help("Points the program to a keyboard device to emulate"))
+        .arg(Arg::with_name("serial")
+             .index(2)
+             .value_name("/dev/ttyUSBX")
+             .help("Points the program to the serial port of the QiDeck"))
+        .get_matches();
+    let path = args.value_of("keyboard").unwrap_or("/dev/input/event2");
+    let port = args.value_of("serial").unwrap_or("/dev/ttyUSB0");
     let baud = 115200;
+
+    println!("Cloning: {}", path);
     let f = File::open(path).unwrap();
-
     let d = Device::new_from_fd(f).unwrap();
-
     let i = UInputDevice::create_from_device(&d).unwrap();
 
     let mut settings: SerialPortSettings = Default::default();
@@ -101,7 +107,8 @@ fn main() {
             loop {
                 match p.read(serial_buf.as_mut_slice()) {
                     Ok(n) if tick.elapsed().as_millis() >= 200 => {
-                        let digit_str = from_utf8(&serial_buf[..n]).unwrap();
+                        let digit_str = from_utf8(&serial_buf[..n]).unwrap().trim();
+                        if digit_str.is_empty() { continue; }
                         match digit_str.parse::<u8>() {
                             Ok(1) => up_space(&i),
                             Ok(2) => vol_up(&i),

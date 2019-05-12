@@ -1,6 +1,6 @@
 [package]
 name = "evdev-sand"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Brooks J Rady <b.j.rady@gmail.com>"]
 edition = "2018"
 
@@ -8,3 +8,4 @@ edition = "2018"
 evdev-rs = "*"
 serialport = "*"
 rand = "*"
+clap = "*"
